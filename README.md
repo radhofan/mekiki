@@ -27,15 +27,10 @@ graph TD
     Client[Next.js Frontend] -->|HTTP Requests| API[FastAPI Backend]
     API -->|Async DB Queries| DB[(PostgreSQL Database)]
     API -->|Ollama Queries| LLM[Local Ollama llama3.2]
-    
-    subgraph Frontend [web/]
-        Client -->|Zustand| Store[Batch Store]
-        Client -->|TanStack Query| Poller[Background Poller]
-    end
 
     subgraph Backend [api/]
         API -->|SQL Translation| LlamaIndex[LlamaIndex Engine]
-        API -->|ReAct Agent| LangChain[LangChain Executor]
+        API -->|Agent| LangChain[LangChain Executor]
         LlamaIndex --> DB
         LangChain --> LLM
     end
@@ -57,14 +52,14 @@ graph TD
 
 ## Tech Stack
 
-| Layer         | Technology                                                            |
-| ------------- | --------------------------------------------------------------------- |
-| **Frontend**  | Next.js (App Router), React, Tailwind CSS, Shadcn UI                  |
-| **State/Query**| TanStack Query (React Query), Zustand                                |
-| **Backend**   | FastAPI (Python 3.10+), SQLAlchemy                                    |
-| **AI Framework**| LangChain (ReAct Agent & Tooling), LlamaIndex (SQL NL Query Engine)  |
-| **Database**  | PostgreSQL (on Windows via Scoop)                                     |
-| **AI Engine** | Ollama (Llama 3.2 / local model)                                      |
+| Layer            | Technology                                                          |
+| ---------------- | ------------------------------------------------------------------- |
+| **Frontend**     | Next.js (App Router), React, Tailwind CSS, Shadcn UI                |
+| **State/Query**  | TanStack Query (React Query), Zustand                               |
+| **Backend**      | FastAPI (Python 3.10+), SQLAlchemy                                  |
+| **AI Framework** | LangChain (ReAct Agent & Tooling), LlamaIndex (SQL NL Query Engine) |
+| **Database**     | PostgreSQL (on Windows via Scoop)                                   |
+| **AI Engine**    | Ollama (Llama 3.2 / local model)                                    |
 
 ---
 
@@ -83,14 +78,19 @@ psql -U postgres -c "CREATE DATABASE hr_ats_db;"
 ```
 
 #### Allow local connections in pg_hba.conf
+
 Ensure your Scoop PostgreSQL `pg_hba.conf` contains:
+
 ```
 host    all    all    0.0.0.0/0    trust
 ```
+
 And `postgresql.conf` has:
+
 ```
 listen_addresses = '*'
 ```
+
 Then restart Postgres: `pg_ctl restart -D "%PGDATA%"`.
 
 ### 2. Ollama Setup
@@ -142,13 +142,13 @@ The frontend is live at `http://localhost:3000`.
 
 ## Main Routes
 
-| Path           | Purpose                                                  |
-| -------------- | -------------------------------------------------------- |
-| `/`            | Dashboard overview showing stats                         |
-| `/roles`       | List of job openings and create role form                |
-| `/upload`      | Resume upload zone with automatic candidate auto-fill    |
-| `/role/{id}`   | Ranked candidate leaderboard and AI evaluation summaries |
-| `/chatbot`     | Harry Chatbot workspace interface                        |
+| Path         | Purpose                                                  |
+| ------------ | -------------------------------------------------------- |
+| `/`          | Dashboard overview showing stats                         |
+| `/roles`     | List of job openings and create role form                |
+| `/upload`    | Resume upload zone with automatic candidate auto-fill    |
+| `/role/{id}` | Ranked candidate leaderboard and AI evaluation summaries |
+| `/chatbot`   | Harry Chatbot workspace interface                        |
 
 ---
 
