@@ -35,7 +35,7 @@ export default function RolesPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchRoles(); }, []);
+  useEffect(() => { setTimeout(fetchRoles, 0); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,7 +179,7 @@ export default function RolesPage() {
         <div className='glass p-16 text-center rounded-xl'>
           <p className='text-5xl mb-4'>◉</p>
           <p className='text-slate-400 mb-2'>No job roles yet</p>
-          <p className='text-slate-600 text-sm'>Click "New Role" to create your first opening.</p>
+          <p className='text-slate-600 text-sm'>Click &quot;New Role&quot; to create your first opening.</p>
         </div>
       ) : (
         <div className='space-y-3'>

@@ -10,6 +10,7 @@ from src.schemas import (
     BatchEvaluationResponse,
     EvaluationOut,
     LeaderboardEntry,
+    EvaluationHistoryEntry,
 )
 from src.services.ai_service import evaluate_candidate_with_ai
 
@@ -50,6 +51,8 @@ async def _run_evaluation(candidate_id: int, role_id: int, db: AsyncSession) -> 
         existing_eval.qualification_status = result.status
         existing_eval.ai_justification = result.justification
         existing_eval.extracted_skills = result.identified_skills
+        from datetime import datetime
+        existing_eval.evaluated_at = datetime.utcnow()
         await db.commit()
         await db.refresh(existing_eval)
         return existing_eval
@@ -71,20 +74,41 @@ async def _run_evaluation(candidate_id: int, role_id: int, db: AsyncSession) -> 
 # ── Batch evaluation (background task) ───────────────────────────────────────
 
 async def _batch_evaluate_task(role_id: int) -> None:
-    '''Background task: evaluate all un-scored candidates for a role.'''
+    '''Background task: evaluate all candidates for a role.'''
     async with AsyncSessionLocal() as db:
-        # Fetch candidates WITHOUT an evaluation for this role
-        subquery = (
-            select(CandidateEvaluation.candidate_id)
-            .where(CandidateEvaluation.role_id == role_id)
-        )
-        result = await db.execute(
-            select(Candidate).where(Candidate.candidate_id.not_in(subquery))
-        )
+        # Fetch all candidates
+        result = await db.execute(select(Candidate))
         candidates = result.scalars().all()
 
-        logger.info('Batch evaluation: %d unscored candidates for role %d', len(candidates), role_id)
+        logger.info('Batch evaluation: %d candidates for role %d', len(candidates), role_id)
 
+        # Immediately set status to "Evaluating" for all candidates in DB (create evaluation if not exist)
+        for candidate in candidates:
+            try:
+                existing = await db.execute(
+                    select(CandidateEvaluation).where(
+                        CandidateEvaluation.candidate_id == candidate.candidate_id,
+                        CandidateEvaluation.role_id == role_id,
+                    )
+                )
+                existing_eval = existing.scalar_one_or_none()
+                if existing_eval:
+                    existing_eval.qualification_status = 'Evaluating'
+                else:
+                    new_eval = CandidateEvaluation(
+                        candidate_id=candidate.candidate_id,
+                        role_id=role_id,
+                        match_score=0,
+                        qualification_status='Evaluating',
+                        ai_justification='Evaluation in progress...',
+                    )
+                    db.add(new_eval)
+            except Exception as e:
+                logger.error('Failed to set evaluating status: %s', e)
+        
+        await db.commit()
+
+        # Run AI evaluations sequentially
         for candidate in candidates:
             try:
                 await _run_evaluation(candidate.candidate_id, role_id, db)
@@ -95,8 +119,21 @@ async def _batch_evaluate_task(role_id: int) -> None:
                 logger.error(
                     'Batch: failed for candidate %d: %s', candidate.candidate_id, exc
                 )
-                # Roll back any uncommitted state so the session stays clean for the next candidate
-                await db.rollback()
+                # Reset status to Unqualified if it failed so it doesn't get stuck in "Evaluating"
+                try:
+                    existing = await db.execute(
+                        select(CandidateEvaluation).where(
+                            CandidateEvaluation.candidate_id == candidate.candidate_id,
+                            CandidateEvaluation.role_id == role_id,
+                        )
+                    )
+                    existing_eval = existing.scalar_one_or_none()
+                    if existing_eval and existing_eval.qualification_status == 'Evaluating':
+                        existing_eval.qualification_status = 'Unqualified'
+                        existing_eval.ai_justification = f'Evaluation failed: {exc}'
+                        await db.commit()
+                except Exception:
+                    await db.rollback()
 
 
 @router.post('/batch/{role_id}', response_model=BatchEvaluationResponse)
@@ -106,7 +143,7 @@ async def batch_evaluate(
     db: AsyncSession = Depends(get_db),
 ) -> BatchEvaluationResponse:
     '''
-    Trigger background AI evaluation for all candidates not yet scored for this role.
+    Trigger background AI evaluation for all candidates for this role.
     Returns immediately; processing continues in the background.
     '''
     role = await db.get(JobRole, role_id)
@@ -114,15 +151,9 @@ async def batch_evaluate(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Role not found')
 
     # Count how many will be queued
-    subquery = (
-        select(CandidateEvaluation.candidate_id)
-        .where(CandidateEvaluation.role_id == role_id)
-    )
-    result = await db.execute(
-        select(Candidate).where(Candidate.candidate_id.not_in(subquery))
-    )
-    unscored = result.scalars().all()
-    count = len(unscored)
+    result = await db.execute(select(Candidate))
+    candidates = result.scalars().all()
+    count = len(candidates)
 
     background_tasks.add_task(_batch_evaluate_task, role_id)
 
@@ -194,3 +225,39 @@ async def get_leaderboard(
         )
 
     return leaderboard
+
+
+@router.get('/history', response_model=list[EvaluationHistoryEntry])
+async def get_evaluation_history(
+    db: AsyncSession = Depends(get_db),
+) -> list[EvaluationHistoryEntry]:
+    '''Return all candidate evaluations across all roles sorted by evaluated_at DESC.'''
+    result = await db.execute(
+        select(CandidateEvaluation, Candidate, JobRole)
+        .join(Candidate, CandidateEvaluation.candidate_id == Candidate.candidate_id)
+        .join(JobRole, CandidateEvaluation.role_id == JobRole.role_id)
+        .order_by(CandidateEvaluation.evaluated_at.desc())
+    )
+    rows = result.all()
+
+    history: list[EvaluationHistoryEntry] = []
+    for evaluation, candidate, role in rows:
+        history.append(
+            EvaluationHistoryEntry(
+                evaluation_id=evaluation.evaluation_id,
+                candidate_id=candidate.candidate_id,
+                first_name=candidate.first_name,
+                last_name=candidate.last_name,
+                role_id=role.role_id,
+                role_title=role.title,
+                role_department=role.department,
+                match_score=evaluation.match_score,
+                qualification_status=evaluation.qualification_status,
+                ai_justification=evaluation.ai_justification,
+                extracted_skills=evaluation.extracted_skills,
+                evaluated_at=evaluation.evaluated_at,
+            )
+        )
+
+    return history
+

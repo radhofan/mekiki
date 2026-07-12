@@ -42,6 +42,9 @@ import type {
   EvaluationOut,
   BatchEvaluationResponse,
   StatsOut,
+  EvaluationHistoryEntry,
+  ChatbotRequest,
+  ChatbotResponse,
 } from './types';
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -104,3 +107,13 @@ export const batchEvaluate = (roleId: number): Promise<BatchEvaluationResponse> 
 
 export const getLeaderboard = (roleId: number): Promise<LeaderboardEntry[]> =>
   request<LeaderboardEntry[]>(`/api/leaderboard/${roleId}`);
+
+export const getEvaluationHistory = (): Promise<EvaluationHistoryEntry[]> =>
+  request<EvaluationHistoryEntry[]>('/api/evaluate/history');
+
+export const chatWithHarry = (payload: ChatbotRequest): Promise<ChatbotResponse> =>
+  request<ChatbotResponse>('/api/chatbot', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+

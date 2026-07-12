@@ -46,7 +46,7 @@ export interface EvaluationOut {
   evaluated_at: string;
 }
 
-export type QualificationStatus = 'Highly Qualified' | 'Qualified' | 'Unqualified';
+export type QualificationStatus = 'Highly Qualified' | 'Qualified' | 'Unqualified' | 'Evaluating' | 'Not Evaluated';
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 export interface LeaderboardEntry {
@@ -75,3 +75,38 @@ export interface StatsOut {
   total_candidates: number;
   total_evaluations: number;
 }
+
+export interface EvaluationHistoryEntry {
+  evaluation_id: number;
+  candidate_id: number;
+  first_name: string;
+  last_name: string;
+  role_id: number;
+  role_title: string;
+  role_department: string | null;
+  match_score: number;
+  qualification_status: QualificationStatus;
+  ai_justification: string;
+  extracted_skills: string[] | null;
+  evaluated_at: string;
+}
+
+
+// ── Chatbot ───────────────────────────────────────────────────────────────────
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatbotRequest {
+  message: string;
+  history: ChatMessage[];
+}
+
+export interface ChatbotResponse {
+  message: string;
+  query_used: string | null;
+  db_response: string | null;
+}
+
+

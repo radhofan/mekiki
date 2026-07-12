@@ -33,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <NavLink href='/' label='Dashboard' icon='◈' />
             <NavLink href='/roles' label='Job Roles' icon='◉' />
             <NavLink href='/upload' label='Upload CV' icon='⊕' />
+            <NavLink href='/chatbot' label='Harry Chatbot' icon='💬' />
 
             <div className='mt-auto px-2 pt-8 border-t border-white/5'>
               <p className='text-[10px] text-slate-600'>v1.0.0 · HRFast</p>

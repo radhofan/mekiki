@@ -34,7 +34,7 @@ export default function UploadPage() {
     getRoles().then((r) => setHasRoles(r.length > 0)).catch(() => {});
   }, []);
 
-  const triggerAutoParse = async (file: File) => {
+  const triggerAutoParse = useCallback(async (file: File) => {
     setIsParsing(true);
     setParsedFile(null);
     setParseError(null);
@@ -55,19 +55,9 @@ export default function UploadPage() {
     } finally {
       setIsParsing(false);
     }
-  };
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files).filter(
-      (f) => f.type === 'application/pdf'
-    );
-    if (files.length === 0) return;
-    addFiles(files);
   }, []);
 
-  const addFiles = (files: File[]) => {
+  const addFiles = useCallback((files: File[]) => {
     const newItems: FileUploadItem[] = files.map((file) => ({
       file,
       status: 'idle',
@@ -77,7 +67,17 @@ export default function UploadPage() {
     if (files.length > 0) {
       triggerAutoParse(files[0]);
     }
-  };
+  }, [triggerAutoParse]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type === 'application/pdf'
+    );
+    if (files.length === 0) return;
+    addFiles(files);
+  }, [addFiles]);
 
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,7 +318,7 @@ export default function UploadPage() {
           <p className='text-xs text-slate-400'>
             After uploading, go to a{' '}
             <span className='text-cyan-300'>Role Leaderboard</span> and click{' '}
-            <span className='text-cyan-300'>"Run Batch AI Evaluation"</span> to score all CVs.
+            <span className='text-cyan-300'>&quot;Run Batch AI Evaluation&quot;</span> to score all CVs.
           </p>
         </div>
       )}

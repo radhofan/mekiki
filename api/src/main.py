@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from src.config import get_settings
 from src.database import engine, AsyncSessionLocal
 from src.models import Base, Candidate, CandidateEvaluation, JobRole
-from src.routers import candidates, evaluations, leaderboard, roles
+from src.routers import candidates, evaluations, leaderboard, roles, chatbot
 from src.schemas import StatsOut
 
 logging.basicConfig(
@@ -52,6 +52,7 @@ app.include_router(roles.router)
 app.include_router(candidates.router)
 app.include_router(evaluations.router)
 app.include_router(leaderboard.router)
+app.include_router(chatbot.router)
 
 
 # ── Health + Stats ────────────────────────────────────────────────────────────

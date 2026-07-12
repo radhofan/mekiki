@@ -56,7 +56,7 @@ export default function DashboardPage() {
           value={loading ? '—' : String(stats?.total_evaluations ?? 0)}
           icon='◈'
           color='emerald'
-          href='/roles'
+          href='/evaluation-history'
         />
       </div>
 

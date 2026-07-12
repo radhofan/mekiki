@@ -96,3 +96,22 @@ class StatsOut(BaseModel):
     total_roles: int
     total_candidates: int
     total_evaluations: int
+
+
+class EvaluationHistoryEntry(BaseModel):
+    evaluation_id: int
+    candidate_id: int
+    first_name: str
+    last_name: str
+    role_id: int
+    role_title: str
+    role_department: str | None
+    match_score: int
+    qualification_status: str
+    ai_justification: str
+    extracted_skills: list[str] | None
+    evaluated_at: datetime
+
+    model_config = {'from_attributes': True}
+
+
