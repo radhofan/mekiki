@@ -10,7 +10,20 @@ if not hasattr(typing, 'NotRequired'):
     setattr(typing, 'NotRequired', typing_extensions.NotRequired)
 
 import litellm
-from litellm.types.utils import ModelResponse
+import litellm.types.utils as _litellm_utils
+
+if not hasattr(_litellm_utils, 'ChatCompletionReasoningSummaryTextBlock'):
+    setattr(_litellm_utils, 'ChatCompletionReasoningSummaryTextBlock', typing.Any)
+
+from litellm.types.utils import Choices, Message, ModelResponse
+
+# Rebuild Pydantic models for compatibility with Pydantic 2.13+
+for model_cls in (Message, Choices, ModelResponse):
+    if hasattr(model_cls, 'model_rebuild'):
+        try:
+            model_cls.model_rebuild()
+        except Exception:
+            pass
 
 from src.config import get_settings
 from src.prompts import get_prompt_template

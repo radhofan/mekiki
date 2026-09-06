@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { chatWithHarry } from "@/lib/api";
+import { chatWithHarry, getChatbotInfo } from "@/lib/api";
 import type { ChatMessage } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,7 @@ export default function ChatbotPage() {
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [modelName, setModelName] = useState<string>("Loading model...");
   const [expandedQueries, setExpandedQueries] = useState<Record<number, boolean>>({});
 
   // Additional fields for displaying query details per message
@@ -28,6 +29,12 @@ export default function ChatbotPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    getChatbotInfo()
+      .then((info) => setModelName(info.model))
+      .catch(() => setModelName("LLM"));
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -90,11 +97,18 @@ export default function ChatbotPage() {
   return (
     <div className="p-8 max-w-4xl mx-auto h-[90vh] flex flex-col">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold grad-text mb-1">💬 Harry Chatbot</h1>
-        <p className="text-slate-500 text-sm">
-          HRFast&apos;s local assistant powered by LlamaIndex SQL Translation &amp; LangChain
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold grad-text mb-1">💬 Harry Chatbot</h1>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 font-mono">
+              Model: {modelName}
+            </span>
+          </div>
+          <p className="text-slate-500 text-sm">
+            Conversational assistant powered by LangGraph ReAct SQL Agent.
+          </p>
+        </div>
       </div>
 
       {/* Quick Prompts */}

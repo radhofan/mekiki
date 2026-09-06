@@ -9,8 +9,8 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'HRFast — Local AI Hiring Engine',
-  description: 'AI-powered applicant tracking system running 100% locally with Ollama.',
+  title: 'HRFast - AI Hiring Engine',
+  description: 'AI-powered applicant tracking and evaluation system.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 ⚡ HRFast
               </span>
               <p className='text-[10px] text-slate-500 mt-1 uppercase tracking-widest'>
-                Local AI · Ollama
+                AI CV Engine
               </p>
             </div>
 

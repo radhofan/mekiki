@@ -114,7 +114,7 @@ def _get_agent():
     chat_llm = _get_chat_llm()
     prompt_info = get_prompt_version('chatbot_agent')
     system_prompt = prompt_info.system_role
-    return create_react_agent(chat_llm, [query_database], state_modifier=system_prompt)
+    return create_react_agent(chat_llm, [query_database], prompt=system_prompt)
 
 
 class ChatMessage(BaseModel):
@@ -127,10 +127,20 @@ class ChatbotRequest(BaseModel):
     history: list[ChatMessage] = []
 
 
+class ChatbotInfo(BaseModel):
+    model: str
+
+
 class ChatbotResponse(BaseModel):
     message: str
     query_used: str | None = None
     db_response: str | None = None
+
+
+@router.get('/info', response_model=ChatbotInfo)
+async def get_chatbot_info() -> ChatbotInfo:
+    '''Get metadata about the chatbot agent, including the currently active LLM model.'''
+    return ChatbotInfo(model=settings.llm_model)
 
 
 @router.post('', response_model=ChatbotResponse)

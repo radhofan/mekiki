@@ -109,4 +109,9 @@ export interface ChatbotResponse {
   db_response: string | null;
 }
 
+export interface ChatbotInfo {
+  model: string;
+}
+
+
 

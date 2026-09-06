@@ -52,7 +52,7 @@ async def _run_evaluation(candidate_id: int, role_id: int, db: AsyncSession) -> 
         existing_eval.ai_justification = result.justification
         existing_eval.extracted_skills = result.identified_skills
         from datetime import datetime, timezone
-        existing_eval.evaluated_at = datetime.now(timezone.utc)
+        existing_eval.evaluated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         await db.commit()
         await db.refresh(existing_eval)
         return existing_eval

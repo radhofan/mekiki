@@ -68,7 +68,36 @@ graph TD
 
 ---
 
-## Local Setup
+## Docker Setup (Recommended)
+
+Run the entire application stack (PostgreSQL, Ollama, FastAPI backend, Next.js frontend, and automatic model pulling) with a single command.
+
+### 1. Start the Stack
+
+```powershell
+# Build and start all services in the foreground
+docker compose up --build
+
+# Or run in detached mode (background)
+docker compose up -d --build
+```
+
+### 2. Access the Application
+
+- **Frontend Application**: `http://localhost:3000`
+- **Backend API & Swagger Docs**: `http://localhost:8000/docs`
+- **PostgreSQL Database**: `localhost:5432` (`hr_ats_db`, user: `postgres`)
+- **Ollama LLM Server**: `http://localhost:11434` (model `llama3.2` is pulled automatically by the `ollama-pull` service)
+
+### 3. Stop the Stack
+
+```powershell
+docker compose down
+```
+
+---
+
+## Manual Local Setup
 
 ### 1. Database Configuration (Windows via Scoop)
 

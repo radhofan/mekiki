@@ -1,0 +1,94 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mekiki-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hr_ats_db
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./api/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hr_ats_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mekiki-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  ollama-pull:
+    image: curlimages/curl:latest
+    container_name: mekiki-ollama-pull
+    restart: "no"
+    depends_on:
+      - ollama
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "Waiting for Ollama to be available..."
+        until curl -s http://ollama:11434/api/tags > /dev/null; do
+          sleep 2
+        done
+        echo "Pulling llama3.2 model in background..."
+        curl -s http://ollama:11434/api/pull -d '{"model": "llama3.2"}'
+        echo "Model pull command completed."
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: mekiki-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres@db:5432/hr_ats_db
+      - LLM_MODEL=ollama/llama3.2
+      - LLM_API_BASE=http://ollama:11434
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2
+      - STORAGE_PATH=./storage/resumes
+      - FRONTEND_ORIGIN=http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    volumes:
+      - ./api/src:/app/src
+      - resume_storage:/app/storage/resumes
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: mekiki-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+    volumes:
+      - ./web/app:/app/app
+      - ./web/components:/app/components
+      - ./web/lib:/app/lib
+      - ./web/public:/app/public
+
+volumes:
+  pgdata:
+  ollama_data:
+  resume_storage:

@@ -26,7 +26,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className='mb-10'>
         <h1 className='text-3xl font-bold grad-text mb-2'>Dashboard</h1>
-        <p className='text-slate-500 text-sm'>Your local AI hiring engine — 100% private, zero cloud.</p>
+        <p className='text-slate-500 text-sm'>AI powered candidate ranking and evaluation engine.</p>
       </div>
 
       {error && (
@@ -39,21 +39,21 @@ export default function DashboardPage() {
       <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10'>
         <StatCard
           label='Job Roles'
-          value={loading ? '—' : String(stats?.total_roles ?? 0)}
+          value={loading ? '-' : String(stats?.total_roles ?? 0)}
           icon='◉'
           color='violet'
           href='/roles'
         />
         <StatCard
           label='Candidates'
-          value={loading ? '—' : String(stats?.total_candidates ?? 0)}
+          value={loading ? '-' : String(stats?.total_candidates ?? 0)}
           icon='⊕'
           color='cyan'
           href='/upload'
         />
         <StatCard
           label='AI Evaluations'
-          value={loading ? '—' : String(stats?.total_evaluations ?? 0)}
+          value={loading ? '-' : String(stats?.total_evaluations ?? 0)}
           icon='◈'
           color='emerald'
           href='/evaluation-history'

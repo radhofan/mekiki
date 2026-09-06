@@ -29,6 +29,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(msg);
   }
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as unknown as T;
+  }
   return res.json() as Promise<T>;
 }
 
@@ -45,6 +48,7 @@ import type {
   EvaluationHistoryEntry,
   ChatbotRequest,
   ChatbotResponse,
+  ChatbotInfo,
 } from './types';
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -116,4 +120,8 @@ export const chatWithHarry = (payload: ChatbotRequest): Promise<ChatbotResponse>
     method: 'POST',
     body: JSON.stringify(payload),
   });
+
+export const getChatbotInfo = (): Promise<ChatbotInfo> =>
+  request<ChatbotInfo>('/api/chatbot/info');
+
 
