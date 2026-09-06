@@ -1,54 +1,41 @@
 import json
 import logging
+import os
 import re
+import typing
+from typing import cast
+import typing_extensions
 
-import httpx
+if not hasattr(typing, 'NotRequired'):
+    setattr(typing, 'NotRequired', typing_extensions.NotRequired)
+
+import litellm
+from litellm.types.utils import ModelResponse
 
 from src.config import get_settings
+from src.prompts import get_prompt_template
 from src.schemas import LLMEvaluationResult
 
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
-# ── Prompt template ───────────────────────────────────────────────────────────
+# Disable telemetry
+litellm.telemetry = False
 
-EVALUATION_PROMPT = '''You are a senior technical recruiter with 15 years of experience evaluating candidates.
 
-Your task is to analyse a candidate CV against a specific job role and output a structured evaluation.
+def _setup_api_keys() -> None:
+    if settings.openai_api_key:
+        os.environ['OPENAI_API_KEY'] = settings.openai_api_key
+    if settings.anthropic_api_key:
+        os.environ['ANTHROPIC_API_KEY'] = settings.anthropic_api_key
+    if settings.gemini_api_key:
+        os.environ['GEMINI_API_KEY'] = settings.gemini_api_key
 
----
-JOB ROLE TITLE: {title}
 
-REQUIRED SKILLS:
-{required_skills}
+# ── Prompt templates from registry ────────────────────────────────────────────
 
-JOB DESCRIPTION:
-{description}
----
-
-CANDIDATE CV TEXT:
-{cv_text}
----
-
-INSTRUCTIONS:
-- Carefully compare the CV text to the job role requirements.
-- Be objective and technical. Do not invent skills not present in the CV.
-- Respond with ONLY a single valid JSON object. No markdown fences, no preamble, no explanation outside the JSON.
-
-OUTPUT SCHEMA (respond with exactly this structure):
-{{
-  "match_score": <integer 0-100>,
-  "status": <"Highly Qualified" | "Qualified" | "Unqualified">,
-  "justification": "<detailed multi-sentence explanation of the score and why>",
-  "identified_skills": ["<skill1>", "<skill2>", ...]
-}}
-
-SCORING GUIDE:
-- 80-100 → "Highly Qualified"  (strong match, most required skills present)
-- 50-79  → "Qualified"         (partial match, some key skills present)
-- 0-49   → "Unqualified"       (poor match, critical skills missing)
-'''
+EVALUATION_PROMPT = get_prompt_template('candidate_evaluation')
 
 
 def _strip_markdown_fences(raw: str) -> str:
@@ -71,10 +58,12 @@ async def evaluate_candidate_with_ai(
     required_skills: str,
 ) -> LLMEvaluationResult:
     '''
-    Send a structured prompt to the local Ollama instance.
+    Send a structured prompt using LiteLLM (defaults to local Ollama).
     Returns a validated LLMEvaluationResult.
     Raises ValueError on parse failure.
     '''
+    _setup_api_keys()
+
     prompt = EVALUATION_PROMPT.format(
         title=role_title,
         required_skills=required_skills,
@@ -82,30 +71,21 @@ async def evaluate_candidate_with_ai(
         cv_text=cv_text[:8000],  # Trim to avoid exceeding context window
     )
 
-    payload = {
-        'model': settings.ollama_model,
-        'prompt': prompt,
-        'stream': False,
-        'format': 'json',  # Forces JSON mode on supported models
-        'options': {
-            'temperature': 0.1,   # Low temperature for deterministic structured output
-            'num_predict': 1024,
-        },
-    }
+    logger.info('Sending evaluation request via LiteLLM (model=%s)', settings.llm_model)
 
-    logger.info('Sending evaluation request to Ollama (model=%s)', settings.ollama_model)
+    is_ollama = settings.llm_model.startswith('ollama')
+    api_base = settings.llm_api_base if is_ollama else None
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        response = await client.post(
-            f'{settings.ollama_base_url}/api/generate',
-            json=payload,
-        )
-        response.raise_for_status()
-
-    data = response.json()
-    raw_text: str = data.get('response', '')
-
-    logger.debug('Raw Ollama response: %s', raw_text[:500])
+    raw_response = await litellm.acompletion(
+        model=settings.llm_model,
+        messages=[{'role': 'user', 'content': prompt}],
+        api_base=api_base,
+        temperature=0.1,
+        response_format={'type': 'json_object'},
+    )
+    response = cast(ModelResponse, raw_response)
+    raw_text = response.choices[0].message.content or ''
+    logger.debug('Raw LLM response: %s', raw_text[:500])
 
     cleaned = _strip_markdown_fences(raw_text)
 
@@ -136,48 +116,32 @@ async def evaluate_candidate_with_ai(
 
 # ── Candidate info extraction ─────────────────────────────────────────────────
 
-NAME_EXTRACT_PROMPT = '''You are a data extraction assistant. Extract the candidate's personal information from the CV text below.
-
-CV TEXT (first 3000 chars):
-{cv_text}
-
-Respond with ONLY a valid JSON object — no markdown, no explanation:
-{{
-  "first_name": "<first name only>",
-  "last_name": "<last name / surname only>"
-}}
-
-Rules:
-- Use the full first name (not initials).
-- If you cannot confidently determine a value, use an empty string "".
-'''
+NAME_EXTRACT_PROMPT = get_prompt_template('candidate_extraction')
 
 
 async def extract_candidate_info_with_ai(cv_text: str) -> dict[str, str]:
     '''
-    Ask Ollama to extract first_name and last_name from CV text.
+    Ask LLM via LiteLLM to extract first_name and last_name from CV text.
     Returns a dict with 'first_name' and 'last_name' keys.
     Falls back to empty strings on any failure.
     '''
+    _setup_api_keys()
+
     prompt = NAME_EXTRACT_PROMPT.format(cv_text=cv_text[:3000])
 
-    payload = {
-        'model': settings.ollama_model,
-        'prompt': prompt,
-        'stream': False,
-        'format': 'json',
-        'options': {'temperature': 0.0, 'num_predict': 128},
-    }
+    is_ollama = settings.llm_model.startswith('ollama')
+    api_base = settings.llm_api_base if is_ollama else None
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f'{settings.ollama_base_url}/api/generate',
-                json=payload,
-            )
-            response.raise_for_status()
-
-        raw_text = response.json().get('response', '')
+        raw_response = await litellm.acompletion(
+            model=settings.llm_model,
+            messages=[{'role': 'user', 'content': prompt}],
+            api_base=api_base,
+            temperature=0.0,
+            response_format={'type': 'json_object'},
+        )
+        response = cast(ModelResponse, raw_response)
+        raw_text = response.choices[0].message.content or ''
         cleaned = _strip_markdown_fences(raw_text)
         parsed = json.loads(cleaned)
 
@@ -188,4 +152,5 @@ async def extract_candidate_info_with_ai(cv_text: str) -> dict[str, str]:
     except Exception as exc:
         logger.warning('Name extraction AI call failed: %s', exc)
         return {'first_name': '', 'last_name': ''}
+
 

@@ -24,15 +24,18 @@ HRFast is a local Applicant Tracking System powered by **Ollama**, **FastAPI**, 
 
 ```mermaid
 graph TD
-    Client[Next.js Frontend] -->|HTTP Requests| API[FastAPI Backend]
-    API -->|Async DB Queries| DB[(PostgreSQL Database)]
-    API -->|Ollama Queries| LLM[Local Ollama llama3.2]
+    Client["Next.js Frontend"] -->|HTTP Requests| API["FastAPI Backend"]
+    API -->|Async DB Queries| DB[("PostgreSQL Database")]
+    API -->|Unified AI Calls| LiteLLM["LiteLLM Layer"]
+    LiteLLM --> LLM["LLM (Ollama / OpenAI / Claude / Gemini)"]
 
-    subgraph Backend [api/]
-        API -->|SQL Translation| LlamaIndex[LlamaIndex Engine]
-        API -->|Agent| LangChain[LangChain Executor]
-        LlamaIndex --> DB
-        LangChain --> LLM
+    subgraph Backend ["api/"]
+        API -->|Input Validation| GuardrailsIn["Input Guardrails"]
+        GuardrailsIn --> Agent["LangGraph ReAct Agent"]
+        Agent -->|Text-to-SQL Tool| SQLTool["LangChain SQLDatabase"]
+        SQLTool --> DB
+        Agent --> LiteLLM
+        Agent -->|Output Sanitization| GuardrailsOut["Output Guardrails & Fallback"]
     end
 ```
 
@@ -47,19 +50,21 @@ graph TD
 - **Leaderboard**: View ranked candidate leaderboards based on match scores.
 - **Detailed Reports**: Inspect detailed AI justifications and identified skills for each candidate.
 - **Harry Chatbot**: Converse with an AI assistant about candidates, match scores, role counts, or statistics.
+- **Safety and Reliability**: Guardrails AI input/output validation, prompt injection prevention, and bounded retries with fallback response handling.
 
 ---
 
 ## Tech Stack
 
-| Layer            | Technology                                                          |
-| ---------------- | ------------------------------------------------------------------- |
-| **Frontend**     | Next.js (App Router), React, Tailwind CSS, Shadcn UI                |
-| **State/Query**  | TanStack Query (React Query), Zustand                               |
-| **Backend**      | FastAPI (Python 3.10+), SQLAlchemy                                  |
-| **AI Framework** | LangChain (ReAct Agent & Tooling), LlamaIndex (SQL NL Query Engine) |
-| **Database**     | PostgreSQL (on Windows via Scoop)                                   |
-| **AI Engine**    | Ollama (Llama 3.2 / local model)                                    |
+| Layer            | Technology                                                              |
+| ---------------- | ----------------------------------------------------------------------- |
+| **Frontend**     | Next.js (App Router), React, Tailwind CSS, Shadcn UI                    |
+| **State/Query**  | TanStack Query (React Query), Zustand                                   |
+| **Backend**      | FastAPI (Python 3.10+), SQLAlchemy                                      |
+| **AI Framework** | LangChain & LangGraph (ReAct Agent & SQL Tools), Guardrails AI          |
+| **LLM Gateway**  | LiteLLM (Unified multi-provider interface: Ollama, OpenAI, Claude, etc.)|
+| **Database**     | PostgreSQL (on Windows via Scoop)                                       |
+| **AI Engine**    | Local Ollama (`ollama/llama3.2` default) or Cloud Providers (GPT, Claude)|
 
 ---
 
@@ -70,7 +75,7 @@ graph TD
 Scoop PostgreSQL runs on **Windows**.
 
 ```powershell
-# Windows PowerShell — start Postgres
+# Windows PowerShell: start Postgres
 pg_ctl start -D "%PGDATA%"
 
 # Create the database
@@ -118,6 +123,11 @@ python -m venv .venv
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Configure environment variables (.env)
+# Default is local Ollama (ollama/llama3.2). For OpenAI, Claude, or Gemini, update api/.env:
+# LLM_MODEL=ollama/llama3.2
+# OPENAI_API_KEY=sk-...
 
 # Start the API server
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000

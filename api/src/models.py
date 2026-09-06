@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
@@ -15,7 +15,7 @@ class JobRole(Base):
     department: Mapped[str | None] = mapped_column(String(100), nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     required_skills: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     evaluations: Mapped[list['CandidateEvaluation']] = relationship(
         'CandidateEvaluation', back_populates='role', cascade='all, delete-orphan'
@@ -32,7 +32,7 @@ class Candidate(Base):
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
     raw_text_extracted: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     evaluations: Mapped[list['CandidateEvaluation']] = relationship(
         'CandidateEvaluation', back_populates='candidate', cascade='all, delete-orphan'
@@ -52,8 +52,8 @@ class CandidateEvaluation(Base):
     match_score: Mapped[int] = mapped_column(Integer, nullable=False)
     qualification_status: Mapped[str] = mapped_column(String(50), nullable=False)
     ai_justification: Mapped[str] = mapped_column(Text, nullable=False)
-    extracted_skills: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    evaluated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    extracted_skills: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    evaluated_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     candidate: Mapped['Candidate'] = relationship('Candidate', back_populates='evaluations')
     role: Mapped['JobRole'] = relationship('JobRole', back_populates='evaluations')
