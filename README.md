@@ -1,6 +1,6 @@
 # HRFast - Local AI CV Ranking Engine
 
-HRFast is a local Applicant Tracking System powered by **Ollama**, **FastAPI**, **PostgreSQL**, and **Next.js**. It lets recruiters manage job roles, upload candidate resumes, automatically extract details, perform local AI evaluations to rank candidates on interactive leaderboards, and converse with an AI assistant chatbot.
+HRFast is a local Applicant Tracking System powered by **LLM API**, **FastAPI**, **PostgreSQL**, and **Next.js**. It lets recruiters manage job roles, upload candidate resumes, automatically extract details, perform local AI evaluations to rank candidates on interactive leaderboards, and converse with an AI assistant chatbot.
 
 ### Dashboard overview
 
@@ -56,15 +56,15 @@ graph TD
 
 ## Tech Stack
 
-| Layer            | Technology                                                              |
-| ---------------- | ----------------------------------------------------------------------- |
-| **Frontend**     | Next.js (App Router), React, Tailwind CSS, Shadcn UI                    |
-| **State/Query**  | TanStack Query (React Query), Zustand                                   |
-| **Backend**      | FastAPI (Python 3.10+), SQLAlchemy                                      |
-| **AI Framework** | LangChain & LangGraph (ReAct Agent & SQL Tools), Guardrails AI          |
-| **LLM Gateway**  | LiteLLM (Unified multi-provider interface: Ollama, OpenAI, Claude, etc.)|
-| **Database**     | PostgreSQL (on Windows via Scoop)                                       |
-| **AI Engine**    | Local Ollama (`ollama/llama3.2` default) or Cloud Providers (GPT, Claude)|
+| Layer            | Technology                                                                |
+| ---------------- | ------------------------------------------------------------------------- |
+| **Frontend**     | Next.js (App Router), React, Tailwind CSS, Shadcn UI                      |
+| **State/Query**  | TanStack Query (React Query), Zustand                                     |
+| **Backend**      | FastAPI (Python 3.10+), SQLAlchemy                                        |
+| **AI Framework** | LangChain & LangGraph (ReAct Agent & SQL Tools), Guardrails AI            |
+| **LLM Gateway**  | LiteLLM (Unified multi-provider interface: Ollama, OpenAI, Claude, etc.)  |
+| **Database**     | PostgreSQL (on Windows via Scoop)                                         |
+| **AI Engine**    | Local Ollama (`ollama/llama3.2` default) or Cloud Providers (GPT, Claude) |
 
 ---
 
