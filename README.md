@@ -1,6 +1,6 @@
-# HRFast - Local AI CV Ranking Engine
+# HRFast - AI CV Ranking Engine
 
-HRFast is a local Applicant Tracking System powered by **LLM API**, **FastAPI**, **PostgreSQL**, and **Next.js**. It lets recruiters manage job roles, upload candidate resumes, automatically extract details, perform local AI evaluations to rank candidates on interactive leaderboards, and converse with an AI assistant chatbot.
+HRFast is an Applicant Tracking System powered by **LLM API**, **FastAPI**, **PostgreSQL**, and **Next.js**. It lets recruiters manage job roles, upload candidate resumes, automatically extract details, perform AI evaluations to rank candidates on interactive leaderboards, and converse with an AI assistant chatbot.
 
 ### Dashboard overview
 
@@ -161,9 +161,3 @@ The frontend is live at `http://localhost:3000`.
 | `/chatbot`   | Harry Chatbot workspace interface                        |
 
 ---
-
-## Troubleshooting
-
-- **`asyncpg` cannot connect to PostgreSQL**: Check your local PostgreSQL setup. Verify `pg_hba.conf` allows the connection.
-- **Ollama returns timeout**: Make sure `ollama serve` is running. Check `http://localhost:11434` responds.
-- **`pdfplumber` extraction fails**: The service falls back to PyPDF2 automatically. If both fail, the PDF may be image-only (scanned) without extractable text.
